@@ -14,6 +14,8 @@ jobs:
 
       - name: Variable Gathering
         id: gathervars
+        env:
+          REPO: '${{ github.repository }}'
         run: |
           NOT_PREVIOUSLY_PUBLISHED=0
           # get a current BUILD_DATE
@@ -21,15 +23,18 @@ jobs:
           echo "BUILD_DATE=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+          REPO_LOWERCASE=${REPO,,}
+          echo "REPO_LOWERCASE=$REPO_LOWERCASE" >> $GITHUB_ENV
+
           # setting tags
           if echo "$VERSION" | grep -q "beta"; then
-            echo "TAGS=ghcr.io/${{ github.repository }}:beta, ghcr.io/${{ github.repository }}:$VERSION, ghcr.io/${{ github.repository }}:latest" >> $GITHUB_ENV
+            echo "TAGS=ghcr.io/$REPO_LOWERCASE:beta, ghcr.io/$REPO_LOWERCASE:$VERSION, ghcr.io/$REPO_LOWERCASE:latest" >> $GITHUB_ENV
           else
-            echo "TAGS=ghcr.io/${{ github.repository }}:release, ghcr.io/${{ github.repository }}:latest, ghcr.io/${{ github.repository }}:$VERSION" >> $GITHUB_ENV
+            echo "TAGS=ghcr.io/$REPO_LOWERCASE:release, ghcr.io/$REPO_LOWERCASE:latest, ghcr.io/$REPO_LOWERCASE:$VERSION" >> $GITHUB_ENV
           fi
           echo "PRIMARY_TAG=latest" >> $GITHUB_ENV
           # check if version has already been published
-          $(docker manifest inspect ghcr.io/${{ github.repository }}:$VERSION > /dev/null) || NOT_PREVIOUSLY_PUBLISHED=1
+          $(docker manifest inspect ghcr.io/$REPO_LOWERCASE:$VERSION > /dev/null) || NOT_PREVIOUSLY_PUBLISHED=1
           echo "NOT_PREVIOUSLY_PUBLISHED=$NOT_PREVIOUSLY_PUBLISHED" >> $GITHUB_ENV
 
       - name: Set up QEMU
@@ -64,7 +69,7 @@ jobs:
         if: ${{ env.NOT_PREVIOUSLY_PUBLISHED != 0 }}
         id: extract
         with:
-          image: ghcr.io/${{ github.repository }}:${{ env.PRIMARY_TAG }}
+          image: ghcr.io/${{ env.REPO_LOWERCASE }}:${{ env.PRIMARY_TAG }}
           path: web
           
       - name: create release asset
